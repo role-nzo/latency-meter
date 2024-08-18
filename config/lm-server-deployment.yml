@@ -1,0 +1,25 @@
+# for testing purposes: the lm-server is scheduled by the Latency-Aware Scheduler
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lm-server-deployment
+  labels:
+    app: lm-server
+    feature: latency-aware-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: lm-server
+      feature: latency-aware-deployment
+  template:
+    metadata:
+      labels:
+        app: lm-server
+        feature: latency-aware-deployment
+    spec:
+      containers:
+      - name: lm-server-container
+        image: devrols/lm-server
+        ports:
+        - containerPort: 8080

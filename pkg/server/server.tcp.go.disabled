@@ -1,0 +1,55 @@
+// server.go
+package main
+
+import (
+	"flag"
+	"fmt"
+	"net"
+	"os"
+)
+
+func main() {
+	// Parametro per la porta del server Latency Meter
+	latencyMeterServerPort := flag.String("lmport", "8080", "Latency Meter server port")
+	flag.Parse()
+
+	// Listen on port 8080
+	ln, err := net.Listen("tcp", ":"+*latencyMeterServerPort)
+	if err != nil {
+		fmt.Println("Error starting server:", err)
+		os.Exit(1)
+	}
+	defer ln.Close()
+
+	fmt.Println("Server is listening on port " + *latencyMeterServerPort + "...")
+
+	for {
+		// Accept a connection
+		conn, err := ln.Accept()
+		if err != nil {
+			fmt.Println("Error accepting connection:", err)
+			continue
+		}
+
+		// Handle the connection in a goroutine
+		go handleConnection(conn)
+	}
+}
+
+func handleConnection(conn net.Conn) {
+	defer conn.Close()
+
+	// Read the incoming request
+	buf := make([]byte, 1024)
+	_, err := conn.Read(buf)
+	if err != nil {
+		fmt.Println("Error reading from connection:", err)
+		return
+	}
+
+	// Send a response
+	_, err = conn.Write([]byte("pong"))
+	if err != nil {
+		fmt.Println("Error writing to connection:", err)
+	}
+}

@@ -1,0 +1,15 @@
+#######################
+#     NOT WORKING     #
+#######################
+apiVersion: v1
+kind: Service
+metadata:
+  name: lm-server-service
+spec:
+  clusterIP: None
+  selector:
+    app: lm-server
+  ports:
+    - protocol: UDP
+      port: 8080
+      targetPort: 8080

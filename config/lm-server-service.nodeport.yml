@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lm-server-service
+  labels:
+    feature: latency-aware-deployment
+spec:
+  type: NodePort
+  # IMPORTANT. from docs: "avoids a second hop for LoadBalancer and NodePort type Services, but risks potentially imbalanced traffic spreading."
+  #   it prevents that the traffic directed to a node (with the lm-server in execution) is redirected to another node (with the lm-server in execution) for balancing purposes
+  externalTrafficPolicy: Local
+  selector:
+    feature: latency-aware-deployment
+  ports:
+    - protocol: UDP
+      port: 8080           # Port on which the service is exposed
+      targetPort: 8080     # Port on the container to forward traffic to
+      nodePort: 30007    # Port on each node to access the service

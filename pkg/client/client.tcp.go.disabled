@@ -1,0 +1,78 @@
+// client.go
+package main
+
+import (
+	"flag"
+	"fmt"
+	"net"
+	"time"
+)
+
+func main() {
+	// Parametro per il file di configurazione kubeconfig
+	kubeconfig := flag.String("kubeconfig", "/root/.kube/config", "absolute path to the kubeconfig file")
+	// Parametro per l'URL del broker MQTT
+	broker := flag.String("broker", "tcp://broker.hivemq.com:1883", "MQTT broker URL")
+	// Parametro per l'ID del client MQTT
+	clientID := flag.String("clientID", "clientId-KI02s7qxUZ", "MQTT client ID")
+	// Parametro per la porta del server Latency Meter
+	latencyMeterServerPort := flag.String("lmport", "8080", "Latency Meter server port")
+	// Parametro per il selettore di etichette per filtrare i pod
+	labelSelector := flag.String("label", "app=nginx", "label selector to filter pods")
+	// Parametro per il namespace
+	namespace := flag.String("namespace", "", "namespace to filter pods")
+
+	flag.Parse()
+
+	// Connessione al cluster Kubernetes
+	nodes, err := GetNodeIPs(kubeconfig, labelSelector, namespace)
+	if err != nil {
+		fmt.Println("Error getting node IPs:", err)
+		return
+	}
+
+	// Connessione al server MQTT
+	StartMQTTClient(broker, clientID)
+	defer disconnectMQTTClient()
+
+	for _, node := range nodes {
+		fmt.Printf("Node: %s\n", node.Name)
+		fmt.Printf("Internal IP: %s\n", node.InternalIP)
+		fmt.Printf("External IP: %s\n", node.ExternalIP)
+
+		// Connessione al server Latency Meter
+		address := node.InternalIP + ":" + *latencyMeterServerPort
+		fmt.Printf("Connecting to Latency Meter server at %s\n", address)
+
+		// Connect to the server
+		startTime := time.Now()
+		conn, err := net.Dial("tcp", node.InternalIP+":"+*latencyMeterServerPort)
+		if err != nil {
+			fmt.Println("Error connecting to server:", err)
+			return
+		}
+		defer conn.Close()
+
+		// Send a request
+		_, err = conn.Write([]byte("ping"))
+		if err != nil {
+			fmt.Println("Error sending request:", err)
+			return
+		}
+
+		// Read the response
+		buf := make([]byte, 1024)
+		_, err = conn.Read(buf)
+		if err != nil {
+			fmt.Println("Error reading response:", err)
+			return
+		}
+
+		// Calculate RTT
+		rtt := time.Since(startTime)
+		fmt.Printf("RTT: %v\n", rtt)
+
+		publishMessages("test/topic123679", fmt.Sprintf("RTT: %s\nTimestamp: %s", rtt.String(), time.Now().Format(time.RFC3339)))
+	}
+
+}
